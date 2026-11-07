@@ -52,6 +52,10 @@ export default function ProfilePage() {
               <dd>{user.email}</dd>
             </div>
             <div className="info-row">
+              <dt>Matrícula</dt>
+              <dd>{user.matricula}</dd>
+            </div>
+            <div className="info-row">
               <dt>Miembro desde</dt>
               <dd>{formatDate(user.date_joined)}</dd>
             </div>

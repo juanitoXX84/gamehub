@@ -3,8 +3,8 @@
 GameHub es una plataforma web para descubrir videojuegos. Permite explorar un catálogo con datos e imágenes reales de **RAWG Video Games Database**, buscar juegos por nombre, filtrarlos por género, ver su ficha completa y gestionar una cuenta de usuario con autenticación segura.
 
 - **Frontend:** React (Vite) con diseño oscuro en negro y morado, adaptable a computadora y celular.
-- **Backend:** Django + Django REST Framework con autenticación JWT y base de datos SQLite.
-- **Seguridad:** la API KEY de RAWG solo vive en el servidor; el navegador nunca la recibe.
+- **Backend:** Django + Django REST Framework con usuario personalizado (correo + matrícula), autenticación JWT, CRUD de usuarios, documentación Swagger y base de datos SQLite.
+- **Seguridad:** la API KEY de RAWG solo vive en el servidor; el navegador nunca la recibe. Ninguna respuesta de la API incluye la contraseña ni su hash.
 
 ## Funcionalidades
 
@@ -24,7 +24,7 @@ Además incluye buscador con sugerencias en la barra de navegación, galería de
 | Capa | Tecnologías |
 | --- | --- |
 | Frontend | React 19, React Router 7, Axios, Vite 8, CSS propio (sin plantillas) |
-| Backend | Python 3.10+, Django 5.1, Django REST Framework, SimpleJWT (con lista negra de tokens), django-cors-headers, python-dotenv, requests |
+| Backend | Python 3.10+, Django 5.1, Django REST Framework, SimpleJWT (con lista negra de tokens), drf-spectacular (Swagger), django-cors-headers, python-dotenv, requests |
 | Base de datos | SQLite |
 | API externa | [RAWG Video Games Database](https://rawg.io/apidocs) |
 
@@ -40,13 +40,18 @@ gamehub/
 │   ├── requirements.txt
 │   ├── config/               # Configuración del proyecto Django
 │   │   ├── settings.py       # Lee todo lo sensible desde .env
-│   │   ├── urls.py
+│   │   ├── urls.py           # URLs de la API, admin y Swagger
 │   │   ├── exceptions.py     # Formato de errores de la API
 │   │   ├── wsgi.py / asgi.py
-│   ├── accounts/             # App de usuarios: registro, login, logout, perfil
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   ├── urls.py
+│   ├── accounts/             # App de usuarios personalizados
+│   │   ├── models.py         # User (correo como login + matrícula) y su UserManager
+│   │   ├── admin.py          # Usuario en el administrador de Django
+│   │   ├── forms.py          # Formularios del admin para el usuario personalizado
+│   │   ├── serializers.py    # Lectura (sin contraseña), registro y actualización
+│   │   ├── permissions.py    # Solo el propio usuario o un admin pueden editar/eliminar
+│   │   ├── views.py          # Registro, login, logout, CRUD y /users/me/
+│   │   ├── urls.py           # /api/auth/, /api/token/ y /api/users/
+│   │   ├── migrations/
 │   │   └── tests.py
 │   └── games/                # App de videojuegos (proxy hacia RAWG)
 │       ├── rawg_client.py    # Cliente RAWG: API KEY, caché y manejo de errores
@@ -94,10 +99,11 @@ Genera una clave secreta y pégala en `DJANGO_SECRET_KEY` dentro de `backend/.en
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
-Crea la base de datos:
+Crea la base de datos y, si quieres entrar al administrador, un superusuario (pedirá correo, nombre de usuario, matrícula y contraseña):
 
 ```powershell
 python manage.py migrate
+python manage.py createsuperuser
 ```
 
 ### 2. Frontend (React)
@@ -153,6 +159,15 @@ python manage.py runserver
 
 La API queda disponible en `http://127.0.0.1:8000/api/`.
 
+| Recurso | URL |
+| --- | --- |
+| Swagger (documentación interactiva, título **GameHub API**) | `http://127.0.0.1:8000/api/docs/` |
+| ReDoc | `http://127.0.0.1:8000/api/redoc/` |
+| Esquema OpenAPI | `http://127.0.0.1:8000/api/schema/` |
+| Administrador de Django | `http://127.0.0.1:8000/admin/` |
+
+**Probar endpoints protegidos en Swagger:** ejecuta `POST /api/token/` con tu correo y contraseña, copia el valor de `access`, pulsa **Authorize** y pégalo. Desde ese momento Swagger envía `Authorization: Bearer <token>` en cada petición.
+
 ## Cómo ejecutar React
 
 En otra terminal:
@@ -164,15 +179,58 @@ npm run dev
 
 Abre `http://localhost:5173` en el navegador.
 
+## Usuario personalizado
+
+El modelo `accounts.User` (configurado en `AUTH_USER_MODEL`) extiende el usuario de Django:
+
+- `USERNAME_FIELD = "email"`: se inicia sesión con **correo electrónico** y contraseña.
+- `REQUIRED_FIELDS = ["username", "matricula"]`.
+- Campo adicional **`matricula`**: obligatorio, único, de 4 a 20 caracteres (letras, números o guiones) y guardado en mayúsculas.
+- El correo es único y se guarda en minúsculas.
+- Visible y editable en el administrador de Django (lista, búsqueda, alta y edición).
+
 ## Endpoints de la API
+
+### JWT (SimpleJWT)
 
 | Método | Endpoint | Descripción | Autenticación |
 | --- | --- | --- | --- |
-| POST | `/api/auth/register/` | Registro (`username`, `email`, `password`, `password_confirm`) | No |
+| POST | `/api/token/` | Obtener `access` y `refresh` con `email` y `password` | No |
+| POST | `/api/token/refresh/` | Renovar el `access` con el `refresh` | No |
+
+La duración del token de acceso se define con `ACCESS_TOKEN_LIFETIME` (variable `JWT_ACCESS_MINUTES`, 30 minutos por defecto).
+
+### Usuarios (CRUD)
+
+| Método | Endpoint | Descripción | Autenticación |
+| --- | --- | --- | --- |
+| POST | `/api/users/` | Registrar usuario (`email`, `username`, `matricula`, `password`, `password_confirm`) | No |
+| GET | `/api/users/` | Listar usuarios | **Bearer JWT** |
+| GET | `/api/users/{id}/` | Consultar un usuario | **Bearer JWT** |
+| PUT / PATCH | `/api/users/{id}/` | Actualizar usuario (propio o como administrador) | **Bearer JWT** |
+| DELETE | `/api/users/{id}/` | Eliminar usuario (propio o como administrador) | **Bearer JWT** |
+| GET | `/api/users/me/` | Datos personales del usuario autenticado | **Bearer JWT** |
+
+Reglas de contraseña al actualizar:
+
+- Si la petición **no** incluye `password`, la contraseña actual **no cambia**.
+- Si incluye `password`, se valida y se guarda con `set_password()` (hash) **solo** en el usuario que se está editando; nunca se toma la contraseña de quien hace la petición.
+- Ninguna respuesta incluye `password` ni su hash.
+
+### Autenticación usada por el frontend
+
+| Método | Endpoint | Descripción | Autenticación |
+| --- | --- | --- | --- |
+| POST | `/api/auth/register/` | Registro (`username`, `email`, `matricula`, `password`, `password_confirm`); devuelve usuario y tokens | No |
 | POST | `/api/auth/login/` | Inicio de sesión con `email` y `password`; devuelve tokens JWT | No |
 | POST | `/api/auth/refresh/` | Renueva el token de acceso con el `refresh` | No |
 | POST | `/api/auth/logout/` | Cierra sesión invalidando el `refresh` (lista negra) | No (requiere el refresh token) |
 | GET | `/api/auth/me/` | Datos del usuario autenticado | **Bearer JWT** |
+
+### Videojuegos (RAWG)
+
+| Método | Endpoint | Descripción | Autenticación |
+| --- | --- | --- | --- |
 | GET | `/api/games/` | Lista de juegos. Parámetros: `page`, `page_size`, `search`, `genres`, `ordering` | No |
 | GET | `/api/games/search/?q=` | Búsqueda por nombre | No |
 | GET | `/api/games/<id o slug>/` | Detalle del juego con capturas | No |
@@ -183,7 +241,9 @@ Abre `http://localhost:5173` en el navegador.
 
 - Contraseñas almacenadas con el hash seguro de Django (PBKDF2 + SHA256); nunca en texto plano.
 - Validación de contraseñas de Django (longitud mínima, contraseñas comunes, solo numéricas, similitud con el usuario).
-- Validación en el frontend **y** en el backend; correos y nombres de usuario únicos (sin distinguir mayúsculas).
+- Validación en el frontend **y** en el backend; correos, nombres de usuario y matrículas únicos (sin distinguir mayúsculas).
+- Los serializers de respuesta nunca incluyen `password`; en Swagger la contraseña solo aparece en los cuerpos de petición.
+- Solo el propio usuario o un administrador pueden editar o eliminar una cuenta.
 - Autenticación JWT con rotación de tokens y lista negra al cerrar sesión.
 - Rutas privadas protegidas en React y endpoints protegidos en Django.
 - Límite de intentos en registro e inicio de sesión (10 por minuto).

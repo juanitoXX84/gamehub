@@ -1,5 +1,6 @@
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const USERNAME_REGEX = /^[\w.@+-]+$/
+const MATRICULA_REGEX = /^[A-Za-z0-9-]{4,20}$/
 
 export function validateEmail(email) {
   const value = email.trim()
@@ -15,6 +16,15 @@ export function validateUsername(username) {
   if (value.length > 30) return 'El nombre de usuario no puede superar los 30 caracteres.'
   if (!USERNAME_REGEX.test(value)) {
     return 'Solo se permiten letras, números y los caracteres @ . + - _ (sin espacios).'
+  }
+  return null
+}
+
+export function validateMatricula(matricula) {
+  const value = matricula.trim()
+  if (!value) return 'La matrícula es obligatoria.'
+  if (!MATRICULA_REGEX.test(value)) {
+    return 'La matrícula debe tener entre 4 y 20 caracteres (letras, números o guiones).'
   }
   return null
 }
@@ -44,6 +54,7 @@ export function validateRegisterForm(values) {
   const errors = {
     username: validateUsername(values.username),
     email: validateEmail(values.email),
+    matricula: validateMatricula(values.matricula),
     password: validatePassword(values.password),
     passwordConfirm: !values.passwordConfirm
       ? 'Confirma tu contraseña.'

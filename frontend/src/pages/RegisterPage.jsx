@@ -7,7 +7,7 @@ import useAuth from '../hooks/useAuth'
 import { getErrorMessage, getFieldErrors } from '../utils/errors'
 import { getPasswordStrength, validateRegisterForm } from '../utils/validators'
 
-const INITIAL = { username: '', email: '', password: '', passwordConfirm: '' }
+const INITIAL = { username: '', email: '', matricula: '', password: '', passwordConfirm: '' }
 
 const SERVER_FIELD_MAP = { password_confirm: 'passwordConfirm' }
 
@@ -54,6 +54,7 @@ export default function RegisterPage() {
       await register({
         username: values.username.trim(),
         email: values.email.trim(),
+        matricula: values.matricula.trim().toUpperCase(),
         password: values.password,
         passwordConfirm: values.passwordConfirm,
       })
@@ -106,6 +107,19 @@ export default function RegisterPage() {
           onChange={handleChange}
           onBlur={handleBlur}
           error={errors.email}
+        />
+        <FormField
+          id="matricula"
+          label="Matrícula"
+          icon="shield"
+          autoComplete="off"
+          placeholder="A01234567"
+          maxLength={20}
+          value={values.matricula}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          error={errors.matricula}
+          hint="Entre 4 y 20 caracteres: letras, números o guiones."
         />
         <FormField
           id="password"

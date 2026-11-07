@@ -1,11 +1,26 @@
-﻿from rest_framework import permissions
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import rawg_client
-from .serializers import GameListQuerySerializer, GameSearchQuerySerializer
+from .serializers import (
+    GameDetailSerializer,
+    GameListQuerySerializer,
+    GamePageSerializer,
+    GameSearchQuerySerializer,
+    GenreListSerializer,
+    RAWGStatusSerializer,
+)
+
+TAG = "Videojuegos"
+RAWG_ERRORS = {
+    502: OpenApiResponse(description="RAWG rechazó la API KEY o respondió con un error"),
+    503: OpenApiResponse(description="RAWG no está configurado o no está disponible"),
+}
 
 
+@extend_schema(tags=[TAG], summary="Estado de la integración con RAWG", responses=RAWGStatusSerializer)
 class RAWGStatusView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
@@ -20,6 +35,15 @@ class RAWGStatusView(APIView):
         )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=[TAG],
+        summary="Listar videojuegos",
+        operation_id="games_list",
+        parameters=[GameListQuerySerializer],
+        responses={200: GamePageSerializer, **RAWG_ERRORS},
+    )
+)
 class GameListView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
@@ -38,6 +62,12 @@ class GameListView(APIView):
         return Response(data)
 
 
+@extend_schema(
+    tags=[TAG],
+    summary="Buscar videojuegos por nombre",
+    parameters=[GameSearchQuerySerializer],
+    responses={200: GamePageSerializer, **RAWG_ERRORS},
+)
 class GameSearchView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
@@ -55,6 +85,14 @@ class GameSearchView(APIView):
         return Response(data)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=[TAG],
+        summary="Detalle de un videojuego (id o slug)",
+        operation_id="games_detail",
+        responses={200: GameDetailSerializer, 404: OpenApiResponse(description="No encontrado"), **RAWG_ERRORS},
+    )
+)
 class GameDetailView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
@@ -63,6 +101,7 @@ class GameDetailView(APIView):
         return Response(rawg_client.get_game(game_id))
 
 
+@extend_schema(tags=[TAG], summary="Listar géneros", responses={200: GenreListSerializer, **RAWG_ERRORS})
 class GenreListView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]

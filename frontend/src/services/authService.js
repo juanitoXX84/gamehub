@@ -1,9 +1,9 @@
 import apiClient from './apiClient'
 
-export async function registerUser({ username, email, password, passwordConfirm }) {
+export async function registerUser({ username, email, matricula, password, passwordConfirm }) {
   const { data } = await apiClient.post(
     '/auth/register/',
-    { username, email, password, password_confirm: passwordConfirm },
+    { username, email, matricula, password, password_confirm: passwordConfirm },
     { skipAuth: true },
   )
   return data

@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
+    "drf_spectacular",
     # Aplicaciones de GameHub
     "accounts",
     "games",
@@ -102,6 +103,10 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+# --- Usuario personalizado (inicia sesión con correo y tiene matrícula) ------
+
+AUTH_USER_MODEL = "accounts.User"
 
 # --- Contraseñas (hash seguro PBKDF2 por defecto de Django) ------------------
 
@@ -149,6 +154,29 @@ REST_FRAMEWORK = {
         "auth": "10/min",
     },
     "EXCEPTION_HANDLER": "config.exceptions.api_exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# --- Swagger / OpenAPI ---------------------------------------------------------
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "GameHub API",
+    "DESCRIPTION": (
+        "API de GameHub: usuarios personalizados con matrícula, autenticación JWT "
+        "y consulta de videojuegos a través de RAWG.\n\n"
+        "Para probar endpoints protegidos: obtén un token en `POST /api/token/`, pulsa "
+        "**Authorize** y pega el valor de `access`."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SWAGGER_UI_SETTINGS": {"persistAuthorization": True, "displayRequestDuration": True},
+    "TAGS": [
+        {"name": "JWT", "description": "Obtención y renovación de tokens."},
+        {"name": "Usuarios", "description": "CRUD de usuarios y datos personales."},
+        {"name": "Autenticación", "description": "Registro, inicio y cierre de sesión usados por el frontend."},
+        {"name": "Videojuegos", "description": "Consulta de videojuegos mediante RAWG."},
+    ],
 }
 
 SIMPLE_JWT = {
