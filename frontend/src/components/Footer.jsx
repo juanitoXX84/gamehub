@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import Logo from './Logo'
-import useAuth from '../hooks/useAuth'
+import { useAuth } from '../hooks/useAuth'
 
 export default function Footer() {
-  const { isAuthenticated } = useAuth()
+  const { auth } = useAuth()
 
   return (
     <footer className="footer">
@@ -15,12 +15,12 @@ export default function Footer() {
         <nav className="footer__links" aria-label="Enlaces del pie de página">
           <Link to="/">Inicio</Link>
           <Link to="/catalogo">Catálogo</Link>
-          {isAuthenticated ? (
-            <Link to="/perfil">Mi perfil</Link>
+          {auth ? (
+            <Link to="/dashboard">Dashboard</Link>
           ) : (
             <>
               <Link to="/login">Iniciar sesión</Link>
-              <Link to="/registro">Crear cuenta</Link>
+              <Link to="/register">Crear cuenta</Link>
             </>
           )}
         </nav>

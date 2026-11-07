@@ -109,6 +109,8 @@ class RegisterSerializer(serializers.Serializer):
     matricula = serializers.CharField(
         max_length=20, validators=[matricula_validator], error_messages=MATRICULA_ERRORS
     )
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     password = serializers.CharField(
         write_only=True,
         trim_whitespace=False,

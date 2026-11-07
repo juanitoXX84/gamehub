@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import Icon from './Icon'
 import Logo from './Logo'
-import { LOGOUT_MESSAGE } from './PrivateRoute'
 import SearchBar from './SearchBar'
-import useAuth from '../hooks/useAuth'
+import { useAuth } from '../hooks/useAuth'
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth()
+  const { auth, logout } = useAuth()
+  const isAuthenticated = Boolean(auth)
+  const user = auth?.me
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -28,7 +30,8 @@ export default function Navbar() {
   const handleLogout = async () => {
     closeMenu()
     await logout()
-    navigate('/login', { replace: true, state: { message: LOGOUT_MESSAGE } })
+    toast.info('Has cerrado sesión correctamente.')
+    navigate('/login', { replace: true })
   }
 
   const linkClass = ({ isActive }) => `navbar__link${isActive ? ' is-active' : ''}`
@@ -47,8 +50,8 @@ export default function Navbar() {
               Catálogo
             </NavLink>
             {isAuthenticated && (
-              <NavLink to="/perfil" className={linkClass} onClick={closeMenu}>
-                Perfil
+              <NavLink to="/dashboard" className={linkClass} onClick={closeMenu}>
+                Dashboard
               </NavLink>
             )}
           </div>
@@ -58,7 +61,7 @@ export default function Navbar() {
           <div className="navbar__actions">
             {isAuthenticated ? (
               <>
-                <NavLink to="/perfil" className="navbar__user" onClick={closeMenu} title="Mi perfil">
+                <NavLink to="/dashboard" className="navbar__user" onClick={closeMenu} title="Mi dashboard">
                   <span className="avatar avatar--sm">{user.username.charAt(0).toUpperCase()}</span>
                   <span className="navbar__username">{user.username}</span>
                 </NavLink>
@@ -71,7 +74,7 @@ export default function Navbar() {
                 <NavLink to="/login" className="btn btn--ghost btn--sm" onClick={closeMenu}>
                   Iniciar sesión
                 </NavLink>
-                <NavLink to="/registro" className="btn btn--primary btn--sm" onClick={closeMenu}>
+                <NavLink to="/register" className="btn btn--primary btn--sm" onClick={closeMenu}>
                   Registrarse
                 </NavLink>
               </>

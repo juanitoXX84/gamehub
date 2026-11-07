@@ -108,6 +108,14 @@ class RegisterTests(APITestCase):
         self.assertTrue(user.password.startswith("pbkdf2_sha256$"))
         self.assertTrue(user.check_password(VALID_PASSWORD))
 
+    def test_register_accepts_optional_names(self):
+        response = self.client.post(
+            self.url, self.payload(first_name="Juan José", last_name="Martínez"), format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["user"]["first_name"], "Juan José")
+        self.assertEqual(User.objects.get(username="jugador1").last_name, "Martínez")
+
     def test_passwords_must_match(self):
         response = self.client.post(self.url, self.payload(password_confirm="Otra-Clave-2026"), format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

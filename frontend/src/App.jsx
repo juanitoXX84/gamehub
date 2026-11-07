@@ -1,34 +1,26 @@
-import { Route, Routes } from 'react-router-dom'
-import GuestRoute from './components/GuestRoute'
-import Layout from './components/Layout'
-import PrivateRoute from './components/PrivateRoute'
-import CatalogPage from './pages/CatalogPage'
-import GameDetailPage from './pages/GameDetailPage'
-import HomePage from './pages/HomePage'
-import LoginPage from './pages/LoginPage'
-import NotFoundPage from './pages/NotFoundPage'
-import ProfilePage from './pages/ProfilePage'
-import RegisterPage from './pages/RegisterPage'
+import './App.scss'
+import { ToastContainer } from 'react-toastify'
+import { AuthProvider } from './context/AuthContext'
+import { Navigation } from './routes'
 
-export default function App() {
+function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<HomePage />} />
-        <Route path="catalogo" element={<CatalogPage />} />
-        <Route path="juegos/:gameId" element={<GameDetailPage />} />
-
-        <Route element={<GuestRoute />}>
-          <Route path="login" element={<LoginPage />} />
-          <Route path="registro" element={<RegisterPage />} />
-        </Route>
-
-        <Route element={<PrivateRoute />}>
-          <Route path="perfil" element={<ProfilePage />} />
-        </Route>
-
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
+    <AuthProvider>
+      <Navigation />
+      <ToastContainer
+        position="bottom-center"
+        autoClose={5000}
+        hideProgressBar
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover={false}
+        theme="dark"
+      />
+    </AuthProvider>
   )
 }
+
+export default App

@@ -1,13 +1,11 @@
-import axios from 'axios'
-
 export const RAWG_NOT_CONFIGURED = 'rawg_not_configured'
 
 export function isCancelled(error) {
-  return axios.isCancel(error) || error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED'
+  return error?.name === 'AbortError'
 }
 
 export function getErrorCode(error) {
-  return error?.response?.data?.code ?? null
+  return error?.data?.code ?? null
 }
 
 function firstMessage(value) {
@@ -18,13 +16,12 @@ function firstMessage(value) {
 
 export function getErrorMessage(error, fallback = 'Ocurrió un error inesperado. Inténtalo de nuevo.') {
   if (!error) return fallback
-  if (error.code === 'ECONNABORTED') {
-    return 'El servidor tardó demasiado en responder. Inténtalo de nuevo.'
-  }
-  if (!error.response) {
+  if (error.timeout) return 'El servidor tardó demasiado en responder. Inténtalo de nuevo.'
+  if (error.name === 'ApiError' && !error.status) {
     return 'No se pudo conectar con el servidor de GameHub. Verifica que el backend de Django esté en ejecución.'
   }
-  const { status, data } = error.response
+  if (error.name !== 'ApiError') return error.message || fallback
+  const { status, data } = error
   if (data?.detail) return data.detail
   if (data?.non_field_errors) return firstMessage(data.non_field_errors)
   if (status >= 500) return 'El servidor tuvo un problema al procesar la solicitud.'
@@ -32,7 +29,7 @@ export function getErrorMessage(error, fallback = 'Ocurrió un error inesperado.
 }
 
 export function getFieldErrors(error) {
-  const data = error?.response?.data
+  const data = error?.data
   if (!data || typeof data !== 'object' || Array.isArray(data)) return {}
   const result = {}
   for (const [field, value] of Object.entries(data)) {

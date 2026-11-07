@@ -2,31 +2,37 @@
 
 GameHub es una plataforma web para descubrir videojuegos. Permite explorar un catálogo con datos e imágenes reales de **RAWG Video Games Database**, buscar juegos por nombre, filtrarlos por género, ver su ficha completa y gestionar una cuenta de usuario con autenticación segura.
 
-- **Frontend:** React (Vite) con diseño oscuro en negro y morado, adaptable a computadora y celular.
-- **Backend:** Django + Django REST Framework con usuario personalizado (correo + matrícula), autenticación JWT, CRUD de usuarios, documentación Swagger y base de datos SQLite.
+- **Frontend:** React (Vite) organizado como en el manual de la materia (rutas por secciones, layouts, `AuthContext` y custom hooks), con Semantic UI, SASS, Formik + Yup y React Toastify. Diseño oscuro en negro y morado, adaptable a computadora y celular.
+- **Backend:** Django + Django REST Framework con usuario personalizado (correo + matrícula), autenticación JWT, CRUD de usuarios, documentación Swagger, consumo de un Web Service **SOAP** con `zeep` y base de datos SQLite.
 - **Seguridad:** la API KEY de RAWG solo vive en el servidor; el navegador nunca la recibe. Ninguna respuesta de la API incluye la contraseña ni su hash.
 
 ## Funcionalidades
 
-| Página | Ruta | Acceso |
-| --- | --- | --- |
-| Inicio | `/` | Público |
-| Catálogo (buscador, géneros, orden y paginación) | `/catalogo` | Público |
-| Detalle del videojuego | `/juegos/:id` | Público |
-| Registro | `/registro` | Solo visitantes |
-| Inicio de sesión | `/login` | Solo visitantes |
-| Perfil | `/perfil` | **Privada** (requiere sesión) |
+| Página | Ruta | Layout | Acceso |
+| --- | --- | --- | --- |
+| Inicio | `/` y `/home` | `ClientLayout` | Público |
+| Catálogo (buscador, géneros, orden y paginación) | `/catalogo` | `ClientLayout` | Público |
+| Detalle del videojuego | `/juegos/:id` | `ClientLayout` | Público |
+| Inicio de sesión | `/login` | `CommonLayout` | Público |
+| Registro | `/register` | `CommonLayout` | Público |
+| Dashboard | `/dashboard` | `AdminLayout` | **Privada** (si no hay sesión muestra el Login) |
+| Error 404 | `*` | `CommonLayout` | Público |
 
-Además incluye buscador con sugerencias en la barra de navegación, galería de capturas, distribución de opiniones, página 404 y mensajes claros ante errores de conexión, resultados vacíos o falta de configuración de RAWG.
+El **Dashboard** muestra el nombre del usuario que inició sesión (obtenido con `AuthContext`), sus datos personales (`GET /api/auth/me/`) y dos widgets:
+
+- **Clima actual** – API de terceros gratuita [Open-Meteo](https://open-meteo.com) consumida directamente desde React con `fetch` (sin clave).
+- **Países del mundo** – datos de un Web Service **SOAP** público (CountryInfoService) que Django consume con `zeep` y expone en `GET /api/soap/countries/<código>/`.
+
+Además incluye buscador con sugerencias en la barra de navegación, galería de capturas, distribución de opiniones y mensajes claros ante errores de conexión, resultados vacíos o falta de configuración de RAWG.
 
 ## Tecnologías
 
 | Capa | Tecnologías |
 | --- | --- |
-| Frontend | React 19, React Router 7, Axios, Vite 8, CSS propio (sin plantillas) |
-| Backend | Python 3.10+, Django 5.1, Django REST Framework, SimpleJWT (con lista negra de tokens), drf-spectacular (Swagger), django-cors-headers, python-dotenv, requests |
+| Frontend | React 18, React Router v6, Vite 8, Semantic UI React, SASS, Formik, Yup, React Toastify, `fetch` |
+| Backend | Python 3.10+, Django 5.1, Django REST Framework, SimpleJWT (con lista negra de tokens), drf-spectacular (Swagger), django-cors-headers, zeep (SOAP), python-dotenv, requests |
 | Base de datos | SQLite |
-| API externa | [RAWG Video Games Database](https://rawg.io/apidocs) |
+| APIs externas | [RAWG Video Games Database](https://rawg.io/apidocs) (desde Django), [Open-Meteo](https://open-meteo.com) (desde React), [CountryInfoService SOAP](http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso) (desde Django) |
 
 ## Estructura de carpetas
 
@@ -53,10 +59,16 @@ gamehub/
 │   │   ├── urls.py           # /api/auth/, /api/token/ y /api/users/
 │   │   ├── migrations/
 │   │   └── tests.py
-│   └── games/                # App de videojuegos (proxy hacia RAWG)
-│       ├── rawg_client.py    # Cliente RAWG: API KEY, caché y manejo de errores
-│       ├── serializers.py    # Validación de parámetros de búsqueda
-│       ├── views.py
+│   ├── games/                # App de videojuegos (proxy hacia RAWG)
+│   │   ├── rawg_client.py    # Cliente RAWG: API KEY, caché y manejo de errores
+│   │   ├── serializers.py    # Validación de parámetros de búsqueda
+│   │   ├── views.py
+│   │   ├── urls.py
+│   │   └── tests.py
+│   └── countries/            # App que consume el Web Service SOAP
+│       ├── soap_client.py    # Cliente zeep (WSDL de CountryInfoService), caché y errores
+│       ├── serializers.py    # Esquema de las respuestas para Swagger
+│       ├── views.py          # /api/soap/countries/ y /api/soap/countries/<código>/
 │       ├── urls.py
 │       └── tests.py
 └── frontend/
@@ -65,15 +77,26 @@ gamehub/
     ├── package.json
     ├── vite.config.js
     └── src/
-        ├── main.jsx / App.jsx      # Arranque y rutas
-        ├── config/                 # URL de la API
-        ├── context/                # Estado de autenticación (AuthProvider)
-        ├── hooks/                  # useAuth, useFetch, useDebounce
-        ├── services/               # Cliente HTTP, auth, juegos, tokens
-        ├── components/             # Navbar, GameCard, formularios, rutas privadas...
-        ├── pages/                  # Inicio, Catálogo, Detalle, Login, Registro, Perfil, 404
-        ├── utils/                  # Validaciones, formatos y errores
-        └── styles/                 # Estilos globales, layout, componentes y páginas
+        ├── main.jsx                # Arranque (Semantic UI y Toastify)
+        ├── App.jsx / App.scss      # AuthProvider, Navigation, ToastContainer y estilos SASS
+        ├── api/                    # Comunicación con el backend y APIs externas (fetch)
+        │   ├── client.js           # Petición base con JWT y renovación automática del token
+        │   ├── token.js            # setToken / getToken / removeToken (localStorage)
+        │   ├── user.js             # loginApi, registerApi, getMeApi, logoutApi
+        │   ├── games.js            # Videojuegos (RAWG a través de Django)
+        │   ├── countries.js        # Países (SOAP a través de Django)
+        │   └── weather.js          # Clima (API de terceros Open-Meteo)
+        ├── context/AuthContext.jsx # Contexto de usuario: auth, login y logout
+        ├── hooks/                  # useAuth, useUser, useFetch, useDebounce
+        ├── routes/                 # Navigation.jsx, routes.js, routes.admin/client/common.jsx
+        ├── layouts/                # AdminLayout, ClientLayout y CommonLayout
+        ├── pages/
+        │   ├── admin/              # Dashboard
+        │   ├── client/             # Home, Catalog, GameDetail
+        │   └── common/             # Login, Register, Error404
+        ├── components/             # Navbar, Footer, GameCard, widgets del Dashboard...
+        ├── utils/                  # Formatos y manejo de errores
+        └── styles/                 # Parciales SASS: base, layout, componentes y páginas
 ```
 
 ## Requisitos
@@ -129,12 +152,16 @@ copy .env.example .env             # En macOS/Linux: cp .env.example .env
 | `RAWG_TIMEOUT_SECONDS` | Tiempo máximo de espera a RAWG | `10` |
 | `JWT_ACCESS_MINUTES` | Duración del token de acceso | `30` |
 | `JWT_REFRESH_DAYS` | Duración del token de actualización | `7` |
+| `SOAP_COUNTRY_WSDL` | WSDL del servicio SOAP de países | `http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso?WSDL` |
+| `SOAP_CACHE_SECONDS` | Segundos que se guardan en caché las respuestas SOAP | `3600` |
+| `SOAP_TIMEOUT_SECONDS` | Tiempo máximo de espera al servicio SOAP | `15` |
 
 ### `frontend/.env`
 
 | Variable | Descripción | Ejemplo |
 | --- | --- | --- |
-| `VITE_API_URL` | URL base de la API de Django | `http://127.0.0.1:8000/api` |
+| `VITE_BASE_API_URL` | URL del servidor de Django (sin `/api`) | `http://127.0.0.1:8000` |
+| `VITE_LOCAL_STORAGE_ITEM_NAME` | Clave de `localStorage` donde se guarda el token | `gamehub_token` |
 
 > Todo lo que empieza con `VITE_` se incluye en el código del navegador. **Nunca** pongas claves privadas en `frontend/.env`.
 
@@ -147,7 +174,7 @@ copy .env.example .env             # En macOS/Linux: cp .env.example .env
    ```
 3. Reinicia el servidor de Django.
 
-Si la clave no está configurada, GameHub sigue funcionando (registro, login y perfil) y en el lugar del catálogo muestra el aviso **“Conecta GameHub con RAWG”** con estos mismos pasos. Si la clave es incorrecta, se muestra un mensaje indicándolo.
+Si la clave no está configurada, GameHub sigue funcionando (registro, login y Dashboard) y en el lugar del catálogo muestra el aviso **“Conecta GameHub con RAWG”** con estos mismos pasos. Si la clave es incorrecta, se muestra un mensaje indicándolo.
 
 ## Cómo ejecutar Django
 
@@ -178,6 +205,14 @@ npm run dev
 ```
 
 Abre `http://localhost:5173` en el navegador.
+
+### Flujo de autenticación en React
+
+1. `Login.jsx` valida el formulario con **Formik + Yup** y llama a `loginApi`, que hace `POST /api/token/` con `fetch`.
+2. Si las credenciales son correctas, en modo desarrollo se imprime el token de acceso en la consola del navegador, se guarda en `localStorage` (`api/token.js`) y se redirige a `/dashboard`.
+3. `AuthContext` obtiene los datos del usuario con `GET /api/auth/me/` (hook `useUser`) y los comparte con toda la app mediante el hook `useAuth`. Al recargar la página, la sesión se recupera a partir del token guardado.
+4. `AdminLayout` protege el Dashboard: si no hay sesión, muestra el Login.
+5. Si el token de acceso expira, `api/client.js` lo renueva con el refresh token y repite la petición. Al cerrar sesión se invalida el refresh token en el servidor y se borran los tokens del navegador.
 
 ## Usuario personalizado
 
@@ -221,7 +256,7 @@ Reglas de contraseña al actualizar:
 
 | Método | Endpoint | Descripción | Autenticación |
 | --- | --- | --- | --- |
-| POST | `/api/auth/register/` | Registro (`username`, `email`, `matricula`, `password`, `password_confirm`); devuelve usuario y tokens | No |
+| POST | `/api/auth/register/` | Registro (`username`, `email`, `matricula`, `password`, `password_confirm` y opcionalmente `first_name`, `last_name`); devuelve usuario y tokens | No |
 | POST | `/api/auth/login/` | Inicio de sesión con `email` y `password`; devuelve tokens JWT | No |
 | POST | `/api/auth/refresh/` | Renueva el token de acceso con el `refresh` | No |
 | POST | `/api/auth/logout/` | Cierra sesión invalidando el `refresh` (lista negra) | No (requiere el refresh token) |
@@ -237,6 +272,22 @@ Reglas de contraseña al actualizar:
 | GET | `/api/games/genres/` | Lista de géneros | No |
 | GET | `/api/games/status/` | Indica si RAWG está configurado | No |
 
+### Web Service SOAP (países)
+
+Django actúa como cliente SOAP: `countries/soap_client.py` carga el WSDL de **CountryInfoService** con `zeep`, invoca sus operaciones y devuelve el resultado en JSON. Las respuestas se guardan en caché una hora.
+
+| Método | Endpoint | Operación SOAP | Autenticación |
+| --- | --- | --- | --- |
+| GET | `/api/soap/countries/` | `ListOfCountryNamesByName` (lista de países) | **Bearer JWT** |
+| GET | `/api/soap/countries/<código ISO>/` | `FullCountryInfo` y `CountryCurrency` (capital, moneda, lada, idiomas, bandera) | **Bearer JWT** |
+
+Ejemplo desde la terminal (PowerShell), con un token obtenido en `/api/token/`:
+
+```powershell
+$token = (Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/api/token/ -ContentType "application/json" -Body '{"email":"tu@correo.com","password":"tu_contraseña"}').access
+Invoke-RestMethod -Uri http://127.0.0.1:8000/api/soap/countries/MX/ -Headers @{ Authorization = "Bearer $token" }
+```
+
 ## Seguridad implementada
 
 - Contraseñas almacenadas con el hash seguro de Django (PBKDF2 + SHA256); nunca en texto plano.
@@ -245,7 +296,7 @@ Reglas de contraseña al actualizar:
 - Los serializers de respuesta nunca incluyen `password`; en Swagger la contraseña solo aparece en los cuerpos de petición.
 - Solo el propio usuario o un administrador pueden editar o eliminar una cuenta.
 - Autenticación JWT con rotación de tokens y lista negra al cerrar sesión.
-- Rutas privadas protegidas en React y endpoints protegidos en Django.
+- Dashboard protegido en React (`AdminLayout`) y endpoints protegidos en Django (`/api/auth/me/`, CRUD de usuarios y SOAP).
 - Límite de intentos en registro e inicio de sesión (10 por minuto).
 - La API KEY de RAWG solo se usa en Django y no se escribe en los logs.
 - CORS restringido a los orígenes definidos en `.env`.

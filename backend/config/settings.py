@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     # Aplicaciones de GameHub
     "accounts",
     "games",
+    "countries",
 ]
 
 MIDDLEWARE = [
@@ -162,8 +163,8 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "GameHub API",
     "DESCRIPTION": (
-        "API de GameHub: usuarios personalizados con matrícula, autenticación JWT "
-        "y consulta de videojuegos a través de RAWG.\n\n"
+        "API de GameHub: usuarios personalizados con matrícula, autenticación JWT, "
+        "consulta de videojuegos a través de RAWG y consumo de un servicio SOAP de países.\n\n"
         "Para probar endpoints protegidos: obtén un token en `POST /api/token/`, pulsa "
         "**Authorize** y pega el valor de `access`."
     ),
@@ -176,6 +177,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "Usuarios", "description": "CRUD de usuarios y datos personales."},
         {"name": "Autenticación", "description": "Registro, inicio y cierre de sesión usados por el frontend."},
         {"name": "Videojuegos", "description": "Consulta de videojuegos mediante RAWG."},
+        {"name": "SOAP", "description": "Países consultados en un Web Service SOAP público con zeep."},
     ],
 }
 
@@ -211,6 +213,15 @@ RAWG_BASE_URL = os.getenv("RAWG_BASE_URL", "https://api.rawg.io/api").rstrip("/"
 RAWG_CACHE_SECONDS = env_int("RAWG_CACHE_SECONDS", 600)
 RAWG_TIMEOUT_SECONDS = env_int("RAWG_TIMEOUT_SECONDS", 10)
 
+# --- Web Service SOAP (países) ------------------------------------------------
+
+SOAP_COUNTRY_WSDL = os.getenv(
+    "SOAP_COUNTRY_WSDL",
+    "http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso?WSDL",
+)
+SOAP_CACHE_SECONDS = env_int("SOAP_CACHE_SECONDS", 3600)
+SOAP_TIMEOUT_SECONDS = env_int("SOAP_TIMEOUT_SECONDS", 15)
+
 # --- Cabeceras de seguridad -------------------------------------------------
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -225,5 +236,8 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "loggers": {"games": {"handlers": ["console"], "level": "INFO"}},
+    "loggers": {
+        "games": {"handlers": ["console"], "level": "INFO"},
+        "countries": {"handlers": ["console"], "level": "INFO"},
+    },
 }

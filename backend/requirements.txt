@@ -5,3 +5,4 @@ drf-spectacular==0.30.0
 django-cors-headers==4.9.0
 python-dotenv==1.2.4
 requests==2.34.2
+zeep==4.3.3

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from './Icon'
+import { searchGames } from '../api/games'
 import useDebounce from '../hooks/useDebounce'
-import { searchGames } from '../services/gamesService'
 import { getErrorMessage, isCancelled } from '../utils/errors'
 import { cropImage, formatYear } from '../utils/formatters'
 
